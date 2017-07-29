@@ -27,35 +27,36 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 
+from __future__ import print_function, unicode_literals
+
+import argparse
 import sys
-import os
-import glob
-from helpers import download_file
+from .helpers import download_file
+from .nova6 import get_engines
 
-supported_engines = dict()
+def parse_args(args=None):
+    parser = argparse.ArgumentParser(description="Downloads a torrent from a website and stores it to a temporary file")
+    parser.add_argument('--engines-dir', '-d', default=None, dest="engines_dirs", action='append',
+                        help='Specify custom directory for engine plugins. Default is the engines directory inside of the current script directory. Can be specified multiple times')
+    parser.add_argument('engine_url', nargs=1, default=None, help='The search engine URL returned from nova2')
+    parser.add_argument('download_parameter', nargs=1, default=None, help='The download parameter')
 
-engines = glob.glob(os.path.join(os.path.dirname(__file__), 'engines','*.py'))
-for engine in engines:
-    e = engine.split(os.sep)[-1][:-3]
-    if len(e.strip()) == 0: continue
-    if e.startswith('_'): continue
-    try:
-        exec("from engines.%s import %s"%(e,e))
-        exec("engine_url = %s.url"%e)
-        supported_engines[engine_url] = e
-    except:
-        pass
+    return parser.parse_args(args)
+
+def main(args=None):
+    args = parse_args(args)
+    engines = get_engines(args.engines_dirs)
+    supported_engines = {getattr(engines[engine], engine).url: engines[engine] for engine in engines}
+
+    if args.engine_url[0] not in list(supported_engines.keys()):
+        raise SystemExit('This engine_url was not recognized')
+    engine = supported_engines[args.engine_url[0]]
+
+    if hasattr(engine, 'download_torrent'):
+        engine.download_torrent(args.download_parameter[0])
+    else:
+        print(download_file(args.download_parameter[0]))
+    sys.exit(0)
 
 if __name__ == '__main__':
-    if len(sys.argv) < 3:
-        raise SystemExit('./nova2dl.py engine_url download_parameter')
-    engine_url = sys.argv[1].strip()
-    download_param = sys.argv[2].strip()
-    if engine_url not in list(supported_engines.keys()):
-        raise SystemExit('./nova2dl.py: this engine_url was not recognized')
-    exec("engine = %s()"%supported_engines[engine_url])
-    if hasattr(engine, 'download_torrent'):
-        engine.download_torrent(download_param)
-    else:
-        print(download_file(download_param))
-    sys.exit(0)
+    main()

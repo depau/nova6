@@ -1,7 +1,4 @@
-#VERSION: 1.20
-
-# Author:
-#  Christophe DUMEZ (chris@qbittorrent.org)
+#VERSION: 1.45
 
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -27,35 +24,46 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 
-import sys
-import os
-import glob
-from helpers import download_file
+from __future__ import print_function, unicode_literals
 
-supported_engines = dict()
+def prettyPrinter(dictionary):
+    dictionary['size'] = anySizeToBytes(dictionary['size'])
+    outtext = "|".join((dictionary["link"], dictionary["name"].replace("|", " "), str(dictionary["size"]), str(dictionary["seeds"]), str(dictionary["leech"]), dictionary["engine_url"]))
+    if 'desc_link' in dictionary:
+        outtext = "|".join((outtext, dictionary["desc_link"]))
 
-engines = glob.glob(os.path.join(os.path.dirname(__file__), 'engines','*.py'))
-for engine in engines:
-    e = engine.split(os.sep)[-1][:-3]
-    if len(e.strip()) == 0: continue
-    if e.startswith('_'): continue
+    print(outtext)
+
+    # WTF
+    # # fd 1 is stdout
+    # with open(1, 'w', encoding='utf-8', closefd=False) as utf8stdout:
+    #     print(outtext, file=utf8stdout)
+
+
+def anySizeToBytes(size_string):
+    """
+    Convert a string like '1 KB' to '1024' (bytes)
+    """
+    # separate integer from unit
     try:
-        exec("from engines.%s import %s"%(e,e))
-        exec("engine_url = %s.url"%e)
-        supported_engines[engine_url] = e
+        size, unit = size_string.split()
     except:
-        pass
+        try:
+            size = size_string.strip()
+            unit = ''.join([c for c in size if c.isalpha()])
+            if len(unit) > 0:
+                size = size[:-len(unit)]
+        except:
+            return -1
+    if len(size) == 0:
+        return -1
+    size = float(size)
+    if len(unit) == 0:
+        return int(size)
+    short_unit = unit.upper()[0]
 
-if __name__ == '__main__':
-    if len(sys.argv) < 3:
-        raise SystemExit('./nova2dl.py engine_url download_parameter')
-    engine_url = sys.argv[1].strip()
-    download_param = sys.argv[2].strip()
-    if engine_url not in list(supported_engines.keys()):
-        raise SystemExit('./nova2dl.py: this engine_url was not recognized')
-    exec("engine = %s()"%supported_engines[engine_url])
-    if hasattr(engine, 'download_torrent'):
-        engine.download_torrent(download_param)
-    else:
-        print(download_file(download_param))
-    sys.exit(0)
+    # convert
+    units_dict = {'T': 40, 'G': 30, 'M': 20, 'K': 10}
+    if short_unit in units_dict:
+        size = size * 2**units_dict[short_unit]
+    return int(size)

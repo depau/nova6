@@ -33,12 +33,16 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 
-import urllib
+from __future__ import print_function, unicode_literals
+
+import argparse
 from os import path
 from glob import glob
-from sys import argv
-from multiprocessing import Pool, cpu_count
-from fix_encoding import fix_encoding
+from multiprocessing import cpu_count
+from multiprocessing.dummy import Pool
+import requests
+import sys
+from . import importer
 
 THREADED = True
 try:
@@ -48,6 +52,9 @@ except NotImplementedError:
 
 CATEGORIES = {'all', 'movies', 'tv', 'music', 'games', 'anime', 'software', 'pictures', 'books'}
 
+# This ugly workaround will try to mask changes in python2/3 naming conventions
+importer.alias_modules()
+
 ################################################################################
 # Every engine should have a "search" method taking
 # a space-free string as parameter (ex. "family+guy")
@@ -56,30 +63,37 @@ CATEGORIES = {'all', 'movies', 'tv', 'music', 'games', 'anime', 'software', 'pic
 # As a convention, try to list results by decreasing number of seeds or similar
 ################################################################################
 
-def initialize_engines():
+def get_engines(searchdirs=None):
     """ Import available engines
 
-        Return list of available engines
+        Return dict of available engines
     """
-    supported_engines = []
+    if not searchdirs:
+        searchdirs = [path.join(path.dirname(__file__), 'engines')]
 
-    engines = glob(path.join(path.dirname(__file__), 'engines', '*.py'))
-    for engine in engines:
-        engi = path.basename(engine).split('.')[0].strip()
-        if len(engi) == 0 or engi.startswith('_'):
-            continue
-        try:
-            #import engines.[engine]
-            engine_module = __import__(".".join(("engines", engi)))
-            #get low-level module
-            engine_module = getattr(engine_module, engi)
-            #bind class name
-            globals()[engi] = getattr(engine_module, engi)
-            supported_engines.append(engi)
-        except:
-            pass
+    supported_engines = {}
+
+    for searchdir in searchdirs:
+        engines = glob(path.join(searchdir, '*.py'))
+        for engine in engines:
+            engi = path.basename(engine).split('.')[0].strip()
+            if len(engi) == 0 or engi.startswith('_'):
+                continue
+            try:
+                #import engines.[engine]
+                engine_module = importer.import_file(engi, engine)
+                #get low-level module
+                # engine_module = getattr(engine_module, engi)
+                #bind class name
+                globals()[engi] = getattr(engine_module, engi)
+                supported_engines[engi] = engine_module
+            except Exception:
+                pass
 
     return supported_engines
+
+def initialize_engines(searchdir=None):
+    return list(get_engines(searchdir).keys())
 
 def engines_to_xml(supported_engines):
     """ Generates xml for supported engines """
@@ -117,7 +131,6 @@ def displayCapabilities(supported_engines):
 
 def run_search(engine_list):
     """ Run search in engine
-
         @param engine_list List with engine, query and category
 
         @retval False if any exceptions occurred
@@ -132,56 +145,68 @@ def run_search(engine_list):
             engine.search(what, cat)
         else:
             engine.search(what)
+
         return True
-    except:
+    except Exception:
         return False
 
-def main(args):
-    fix_encoding()
-    supported_engines = initialize_engines()
+def parse_args(args=None):
+    parser = argparse.ArgumentParser(description="Searches various bittorrent websites and prints out the results in a machine-readable fashion")
+    parser.add_argument('--capabilities', default=False, action='store_true',
+                        help='Outputs an XML showing search engine plugins capabilities and exits')
+    parser.add_argument('--engines-dir', '-d', default=None, dest="engines_dirs", action='append',
+                        help='Specify custom directory for engine plugins. Default is the engines directory inside of the current script directory. Can be specified multiple times')
+    parser.add_argument('engines', nargs='?', default=None, help='Select engines to be used for search, comma-separated, or "all"')
+    parser.add_argument('category', nargs='?', default=None, help='Select category to be used for search, or "all"')
+    parser.add_argument('keywords', nargs='*', default=None, help='Search keywords')
 
-    if not args:
-        raise SystemExit("./nova2.py [all|engine1[,engine2]*] <category> <keywords>\n"
-                         "available engines: %s" % (','.join(supported_engines)))
+    args = parser.parse_args(args)
 
-    elif args[0] == "--capabilities":
+    if not args.capabilities and not (args.engines and args.category and args.keywords):
+        print("You must specify engines, categories and at least one keyword!", file=sys.stderr)
+        parser.print_usage(file=sys.stderr)
+        exit(1)
+
+    return args
+
+def main(args=None):
+    args = parse_args(args)
+    supported_engines = initialize_engines(args.engines_dirs)
+
+    if args.capabilities:
         displayCapabilities(supported_engines)
         return
 
-    elif len(args) < 3:
-        raise SystemExit("./nova2.py [all|engine1[,engine2]*] <category> <keywords>\n"
-                         "available engines: %s" % (','.join(supported_engines)))
-
-    #get only unique engines with set
-    engines_list = set(e.lower() for e in args[0].strip().split(','))
+    # get only unique engines with set
+    engines_list = set(e.lower() for e in args.engines.strip().split(','))
 
     if 'all' in engines_list:
         engines_list = supported_engines
     else:
-        #discard un-supported engines
+        # discard un-supported engines
         engines_list = [engine for engine in engines_list
                         if engine in supported_engines]
 
     if not engines_list:
-        #engine list is empty. Nothing to do here
+        # engine list is empty. Nothing to do here
         return
 
-    cat = args[1].lower()
+    cat = args.category.lower()
 
     if cat not in CATEGORIES:
         raise SystemExit(" - ".join(('Invalid category', cat)))
 
-    what = urllib.quote(' '.join(args[2:]))
-
+    what = requests.utils.quote(' '.join(args.keywords))
     if THREADED:
-        #child process spawning is controlled min(number of searches, number of cpu)
-        pool = Pool(min(len(engines_list), MAX_THREADS))
-        pool.map(run_search, ([globals()[engine], what, cat] for engine in engines_list))
+        # child process spawning is controlled min(number of searches, number of cpu)
+        try:
+            pool = Pool(min(len(engines_list), MAX_THREADS))
+            pool.map(run_search, ([globals()[engine], what, cat] for engine in engines_list))
+        finally:
+            pool.terminate()
     else:
-        map(run_search, ([globals()[engine], what, cat] for engine in engines_list))
-
-def run():
-    main(argv[1:])
+        # py3 note: map is needed to be evaluated for content to be executed
+        all(map(run_search, ([globals()[engine], what, cat] for engine in engines_list)))
 
 if __name__ == "__main__":
-    run()
+    main()
