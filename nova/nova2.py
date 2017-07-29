@@ -180,5 +180,8 @@ def main(args):
     else:
         map(run_search, ([globals()[engine], what, cat] for engine in engines_list))
 
-if __name__ == "__main__":
+def run():
     main(argv[1:])
+
+if __name__ == "__main__":
+    run()

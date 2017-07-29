@@ -179,5 +179,10 @@ def main(args):
         #py3 note: map is needed to be evaluated for content to be executed
         all(map(run_search, ([globals()[engine], what, cat] for engine in engines_list)))
 
-if __name__ == "__main__":
+
+def run():
     main(argv[1:])
+
+
+if __name__ == "__main__":
+    run()
