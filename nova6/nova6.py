@@ -33,7 +33,7 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 
-from __future__ import print_function, unicode_literals
+from __future__ import print_function, unicode_literals, division
 
 import argparse
 from os import path
@@ -51,6 +51,10 @@ except NotImplementedError:
     MAX_THREADS = 1
 
 CATEGORIES = {'all', 'movies', 'tv', 'music', 'games', 'anime', 'software', 'pictures', 'books'}
+
+progress = 0
+selected_engines = 1 # avoid ZeroDivisionError
+display_progress = False
 
 # This ugly workaround will try to mask changes in python2/3 naming conventions
 importer.alias_modules()
@@ -136,6 +140,8 @@ def run_search(engine_list):
         @retval False if any exceptions occurred
         @retval True  otherwise
     """
+    global progress
+
     engine, what, cat = engine_list
     try:
         engine = engine()
@@ -146,6 +152,11 @@ def run_search(engine_list):
         else:
             engine.search(what)
 
+        # global
+        progress += int(1./selected_engines*100)
+        if display_progress:
+            print("progress={}".format(progress))
+
         return True
     except Exception:
         return False
@@ -154,6 +165,8 @@ def parse_args(args=None):
     parser = argparse.ArgumentParser(description="Searches various bittorrent websites and prints out the results in a machine-readable fashion")
     parser.add_argument('--capabilities', default=False, action='store_true',
                         help='Outputs an XML showing search engine plugins capabilities and exits')
+    parser.add_argument('--progress', '-p', default=False, action='store_true',
+                        help='If set, outputs search progress every now and then')
     parser.add_argument('--engines-dir', '-d', default=None, dest="engines_dirs", action='append',
                         help='Specify custom directory for engine plugins. Default is the engines directory inside of the current script directory. Can be specified multiple times')
     parser.add_argument('engines', nargs='?', default=None, help='Select engines to be used for search, comma-separated, or "all"')
@@ -170,12 +183,16 @@ def parse_args(args=None):
     return args
 
 def main(args=None):
+    global display_progress, selected_engines
     args = parse_args(args)
     supported_engines = initialize_engines(args.engines_dirs)
 
     if args.capabilities:
         displayCapabilities(supported_engines)
         return
+
+    # global
+    display_progress = args.progress
 
     # get only unique engines with set
     engines_list = set(e.lower() for e in args.engines.strip().split(','))
@@ -190,6 +207,8 @@ def main(args=None):
     if not engines_list:
         # engine list is empty. Nothing to do here
         return
+    # global
+    selected_engines = len(engines_list)
 
     cat = args.category.lower()
 
@@ -207,6 +226,9 @@ def main(args=None):
     else:
         # py3 note: map is needed to be evaluated for content to be executed
         all(map(run_search, ([globals()[engine], what, cat] for engine in engines_list)))
+
+    if display_progress:
+        print("progress=100")
 
 if __name__ == "__main__":
     main()
