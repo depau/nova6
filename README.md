@@ -69,6 +69,7 @@ Search results are meant to be machine readable. The format is the following:
 * **seeds** → the number of seeds for this torrent
 * **leech** → the number of leechers for this torrent
 * **engine_url** → the search engine url (i.e: http://www.mininova.org)
+* **desc_link** (optional) → if the search plugin provides it, a human-readable page describing the torrent
 
 
 ### Capabilities
