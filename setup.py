@@ -31,7 +31,7 @@ setup(
 
         'Intended Audience :: Developers',
         'Topic :: Communications :: File Sharing',
-        'Topic :: Internet :: WWW/HTTP :: Indexing/Search'
+        'Topic :: Internet :: WWW/HTTP :: Indexing/Search',
 
         'License :: OSI Approved :: GNU General Public License v2 (GPLv2)',
 
