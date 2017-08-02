@@ -26,6 +26,9 @@
 
 from __future__ import print_function, unicode_literals
 
+import sys
+
+
 def prettyPrinter(dictionary):
     dictionary['size'] = anySizeToBytes(dictionary['size'])
     outtext = "|".join((dictionary["link"], dictionary["name"].replace("|", " "), str(dictionary["size"]), str(dictionary["seeds"]), str(dictionary["leech"]), dictionary["engine_url"]))
@@ -33,6 +36,7 @@ def prettyPrinter(dictionary):
         outtext = "|".join((outtext, dictionary["desc_link"]))
 
     print(outtext)
+    sys.stdout.flush()
 
     # WTF
     # # fd 1 is stdout
