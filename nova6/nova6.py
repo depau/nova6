@@ -36,6 +36,7 @@
 from __future__ import print_function, unicode_literals, division
 
 import argparse
+import io
 from os import path
 from glob import glob
 from multiprocessing import cpu_count
@@ -133,6 +134,10 @@ def displayCapabilities(supported_engines):
                    "</capabilities>"))
     print(xml)
 
+def unbuffer_stdout():
+    binstdout = io.open(sys.stdout.fileno(), 'wb', 0)
+    sys.stdout = io.TextIOWrapper(binstdout, encoding="UTF-8")
+
 def run_search(engine_list):
     """ Run search in engine
         @param engine_list List with engine, query and category
@@ -187,9 +192,12 @@ def main(args=None):
     args = parse_args(args)
     supported_engines = initialize_engines(args.engines_dirs)
 
+
     if args.capabilities:
         displayCapabilities(supported_engines)
         return
+
+    unbuffer_stdout()
 
     # global
     display_progress = args.progress

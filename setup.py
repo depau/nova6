@@ -7,7 +7,7 @@ with open(path.join(here, 'README.md')) as f:
 
 setup(
     name='nova6',
-    version='2.0',
+    version='2.0.1',
     packages=['nova6'],
     url='https://github.com/Depaulicious/Nova6',
     license='GPLv2',
