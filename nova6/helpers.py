@@ -1,4 +1,4 @@
-# VERSION: 2.00
+#VERSION: 2.00
 
 # Author:
 #  Christophe DUMEZ (chris@qbittorrent.org)
