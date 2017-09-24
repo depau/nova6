@@ -1,8 +1,9 @@
-#VERSION: 1.41
+#VERSION: 2.00
 
 # Author:
 #  Fabien Devaux <fab AT gnux DOT info>
 # Contributors:
+#  Davide Depau <davide@depau.eu> (Python2+3 support)
 #  Christophe Dumez <chris@qbittorrent.org> (qbittorrent integration)
 #  Thanks to gab #gcu @ irc.freenode.net (multipage support on PirateBay)
 #  Thanks to Elias <gekko04@users.sourceforge.net> (torrentreactor and isohunt search engines)
@@ -74,7 +75,8 @@ def get_engines(searchdirs=None):
         Return dict of available engines
     """
     if not searchdirs:
-        searchdirs = [path.join(path.dirname(__file__), 'engines')]
+        searchdirs = [path.join(path.dirname(__file__), 'engines'),
+                      path.join(path.dirname(__file__), '..', 'engines')]
 
     supported_engines = {}
 
@@ -173,7 +175,7 @@ def parse_args(args=None):
     parser.add_argument('--progress', '-p', default=False, action='store_true',
                         help='If set, outputs search progress every now and then')
     parser.add_argument('--engines-dir', '-d', default=None, dest="engines_dirs", action='append',
-                        help='Specify custom directory for engine plugins. Default is the engines directory inside of the current script directory. Can be specified multiple times')
+                        help='Specify custom directory for engine plugins. Default is the engines directory inside of the current script directory and its parent. Can be specified multiple times')
     parser.add_argument('engines', nargs='?', default=None, help='Select engines to be used for search, comma-separated, or "all"')
     parser.add_argument('category', nargs='?', default=None, help='Select category to be used for search, or "all"')
     parser.add_argument('keywords', nargs='*', default=None, help='Search keywords')

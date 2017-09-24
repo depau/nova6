@@ -1,7 +1,9 @@
-#VERSION: 1.20
+#VERSION: 2.00
 
 # Author:
 #  Christophe DUMEZ (chris@qbittorrent.org)
+# Contributors:
+#  Davide Depau <davide@depau.eu> (Python2+3 support)
 
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
