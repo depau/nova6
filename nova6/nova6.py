@@ -184,7 +184,7 @@ def parse_args(args=None):
                         help='Outputs an XML showing search engine plugins capabilities and exits')
     parser.add_argument('--progress', '-p', default=False, action='store_true',
                         help='If set, outputs search progress every now and then')
-    parser.add_argument('--engines-dir', '-d', default=[path.join(path.dirname(__file__), 'engines')], dest="engines_dirs", action='append',
+    parser.add_argument('--engines-dir', '-d', default=None, dest="engines_dirs", action='append',
                         help='Specify custom directory for engine plugins. Default is the engines directory inside of the current script directory and its parent. Can be specified multiple times')
     parser.add_argument('engines', nargs='?', help='Select engines to be used for search, comma-separated, or "all"')
     parser.add_argument('category', nargs='?', help='Select category to be used for search, or "all"')
