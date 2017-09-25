@@ -52,8 +52,10 @@ else:  # Python 2
         import imp
         return imp.load_source(name, path)
 
-# Yeah I know
 def alias_modules():
+    """
+    Creates aliases to nova6 modules and version independent HTML Parser.
+    """
     from . import helpers, novaprinter, socks, sgmllib3
     sys.modules["helpers"] = helpers
     sys.modules["novaprinter"] = novaprinter

@@ -54,13 +54,25 @@ except NotImplementedError:
 
 CATEGORIES = {'all', 'movies', 'tv', 'music', 'games', 'anime', 'software', 'pictures', 'books'}
 
-progress = 0
-selected_engines = 1 # avoid ZeroDivisionError
-display_progress = False
+class Progress:
+    def __init__(self, engines_num, is_display):
+        self.progress = 0
+        self.engines_num = engines_num
+
+        if not is_display:
+            self.inc = lambda: None
+            self.print = lambda: None
+
+    @staticmethod
+    def print(num):
+        print("progress={}%".format(num))
+
+    def inc(self):
+        self.progress += int(1./self.selected_engines*100)
+        self.print(self.progress)
 
 # This ugly workaround will try to mask changes in python2/3 naming conventions
 importer.alias_modules()
-
 ################################################################################
 # Every engine should have a "search" method taking
 # a space-free string as parameter (ex. "family+guy")
@@ -74,7 +86,7 @@ def get_engines(searchdirs=None):
 
         Return dict of available engines
     """
-    if not searchdirs:
+    if searchdirs is not None:
         searchdirs = [path.join(path.dirname(__file__), 'engines'),
                       path.join(path.dirname(__file__), '..', 'engines')]
 
@@ -114,11 +126,11 @@ def engines_to_xml(supported_engines):
             supported_categories = " ".join((key for key in search_engine.supported_categories.keys()
                                              if key is not "all"))
 
-        yield  "".join((tab, "<", short_name, ">\n",
-                        tab, tab, "<name>", search_engine.name, "</name>\n",
-                        tab, tab, "<url>", search_engine.url, "</url>\n",
-                        tab, tab, "<categories>", supported_categories, "</categories>\n",
-                        tab, "</", short_name, ">\n"))
+        yield "".join((tab, "<", short_name, ">\n",
+                       tab, tab, "<name>", search_engine.name, "</name>\n",
+                       tab, tab, "<url>", search_engine.url, "</url>\n",
+                       tab, tab, "<categories>", supported_categories, "</categories>\n",
+                       tab, "</", short_name, ">\n"))
 
 def displayCapabilities(supported_engines):
     """
@@ -152,7 +164,7 @@ def run_search(engine_list):
     engine, what, cat = engine_list
     try:
         engine = engine()
-        #avoid exceptions due to invalid category
+        # avoid exceptions due to invalid category
         if hasattr(engine, 'supported_categories'):
             cat = cat if cat in engine.supported_categories else "all"
             engine.search(what, cat)
@@ -160,9 +172,7 @@ def run_search(engine_list):
             engine.search(what)
 
         # global
-        progress += int(1./selected_engines*100)
-        if display_progress:
-            print("progress={}".format(progress))
+        progress.inc()
 
         return True
     except Exception:
@@ -174,11 +184,11 @@ def parse_args(args=None):
                         help='Outputs an XML showing search engine plugins capabilities and exits')
     parser.add_argument('--progress', '-p', default=False, action='store_true',
                         help='If set, outputs search progress every now and then')
-    parser.add_argument('--engines-dir', '-d', default=None, dest="engines_dirs", action='append',
+    parser.add_argument('--engines-dir', '-d', default=[path.join(path.dirname(__file__), 'engines')], dest="engines_dirs", action='append',
                         help='Specify custom directory for engine plugins. Default is the engines directory inside of the current script directory and its parent. Can be specified multiple times')
-    parser.add_argument('engines', nargs='?', default=None, help='Select engines to be used for search, comma-separated, or "all"')
-    parser.add_argument('category', nargs='?', default=None, help='Select category to be used for search, or "all"')
-    parser.add_argument('keywords', nargs='*', default=None, help='Search keywords')
+    parser.add_argument('engines', nargs='?', help='Select engines to be used for search, comma-separated, or "all"')
+    parser.add_argument('category', nargs='?', help='Select category to be used for search, or "all"')
+    parser.add_argument('keywords', nargs='*', help='Search keywords')
 
     args = parser.parse_args(args)
 
@@ -190,19 +200,16 @@ def parse_args(args=None):
     return args
 
 def main(args=None):
-    global display_progress, selected_engines
+    global progress
     args = parse_args(args)
     supported_engines = initialize_engines(args.engines_dirs)
-
 
     if args.capabilities:
         displayCapabilities(supported_engines)
         return
 
+    # TODO: describe benefits
     unbuffer_stdout()
-
-    # global
-    display_progress = args.progress
 
     # get only unique engines with set
     engines_list = set(e.lower() for e in args.engines.strip().split(','))
@@ -217,8 +224,9 @@ def main(args=None):
     if not engines_list:
         # engine list is empty. Nothing to do here
         return
+
     # global
-    selected_engines = len(engines_list)
+    progress = Progress(len(engines_list), args.progress)
 
     cat = args.category.lower()
 
@@ -237,8 +245,7 @@ def main(args=None):
         # py3 note: map is needed to be evaluated for content to be executed
         all(map(run_search, ([globals()[engine], what, cat] for engine in engines_list)))
 
-    if display_progress:
-        print("progress=100")
+    progress.print(100)
 
 if __name__ == "__main__":
     main()
