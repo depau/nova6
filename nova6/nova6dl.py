@@ -56,7 +56,7 @@ def main(args=None):
     if hasattr(engine, 'download_torrent'):
         engine.download_torrent(args.download_parameter)
     else:
-        print(download_file(args.download_parameter)
+        print(download_file(args.download_parameter))
 
 if __name__ == '__main__':
     main()

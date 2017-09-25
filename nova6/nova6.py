@@ -86,7 +86,7 @@ def get_engines(searchdirs=None):
 
         Return dict of available engines
     """
-    if searchdirs is not None:
+    if searchdirs is None:
         searchdirs = [path.join(path.dirname(__file__), 'engines'),
                       path.join(path.dirname(__file__), '..', 'engines')]
 
