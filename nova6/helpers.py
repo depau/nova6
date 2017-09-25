@@ -85,8 +85,7 @@ def retrieve_url(url):
 
 def download_file(url, referer=None):
     """ Download file at url and write it to a file, return the path to the file and the url """
-    # Download url
-    headers = globals()["headers"]
+    headers = dict(globals()["headers"]) # To not modify global default headers
     if referer is not None:
         headers['referer'] = referer
     r = requests.get(url, headers=headers)
